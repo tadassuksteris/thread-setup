@@ -1,0 +1,11 @@
+{
+  "name": "thread-setup",
+  "version": "0.2.0",
+  "description": "Choose per thread whether Claude uses auto memory and which skills it can see, from a /setup panel, with defaults for new threads.",
+  "author": {
+    "name": "tadassuksteris",
+    "url": "https://github.com/tadassuksteris"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

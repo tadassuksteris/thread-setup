@@ -32,6 +32,7 @@ const skillsOff = atom({ plugin: 'thread-setup', key: 'skillsOff' } as const, []
 const defaults = atom({ plugin: 'thread-setup', key: 'defaults' } as const, FACTORY_SETUP)
 const keptOut = atom({ plugin: 'thread-setup', key: 'keptOut' } as const, NOTHING_KEPT_OUT)
 const isBandOpen = atom({ plugin: 'thread-setup', key: 'isBandOpen' } as const, false)
+const isStatusLineOn = atom({ plugin: 'thread-setup', key: 'isStatusLineOn' } as const, true)
 const skills = atom({ plugin: 'thread-setup', key: 'skills' } as const, [] as SkillInfo[])
 const isSkillListLive = atom({ plugin: 'thread-setup', key: 'isSkillListLive' } as const, false)
 const skillQuery = atom({ plugin: 'thread-setup', key: 'skillQuery' } as const, '')
@@ -66,6 +67,8 @@ async function loadStored($: EngineInterface) {
   if ((await $.store.get(STORE_KEYS.descriptionMode)) === 'full') {
     await update($, descriptionMode, () => 'full')
   }
+
+  if ((await $.store.get(STORE_KEYS.statusLine)) === 'off') await update($, isStatusLineOn, () => false)
 
   // Until this thread's skill listing arrives, the panel shows the last one seen.
   if ((await read($, skills)).length === 0) {
@@ -150,6 +153,18 @@ async function setBandOpen($: EngineInterface, isOpen: boolean) {
   await update($, isBandOpen, () => isOpen)
 }
 
+/** Shows or hides the desktop status line, in every thread. */
+async function setStatusLine($: EngineInterface, isOn: boolean) {
+  await update($, isStatusLineOn, () => isOn)
+  await $.store.set(STORE_KEYS.statusLine, isOn ? 'on' : 'off')
+}
+
+/** Closing the status line is switching it off; say where it comes back from. */
+async function closeStatusLine($: EngineInterface) {
+  await setStatusLine($, false)
+  $.ui.toast('Status line off. Turn it back on in /setup, under Mod settings.')
+}
+
 /** Takes in the main thread's skill listing, and keeps it for the next thread's panel. */
 async function rememberSkills($: EngineInterface, seen: SkillInfo[]) {
   // The first listing replaces the last thread's; later ones (skills added) merge in.
@@ -182,6 +197,7 @@ async function readPanelInput($: EngineInterface, surface: PanelInput['surface']
     view: await read($, skillView),
     describe: await read($, descriptionMode),
     collapsed: await read($, collapsedGroups),
+    isStatusLineOn: await read($, isStatusLineOn),
     surface,
     width,
   }
@@ -205,6 +221,7 @@ function panelActions($: EngineInterface): PanelActions {
     },
     resetToDefaults: () => resetToDefaults($),
     saveAsDefaults: () => saveThreadAsDefaults($),
+    setStatusLine: isOn => setStatusLine($, isOn),
   }
 }
 
@@ -213,6 +230,7 @@ function bandActions($: EngineInterface): BandActions {
     setMemory: mode => setMemory($, mode),
     openPanel: () => openPanel($),
     close: () => setBandOpen($, false),
+    closeStatusLine: () => closeStatusLine($),
   }
 }
 
@@ -405,6 +423,8 @@ export const register: Register = on => {
         hasSurvey: e.props.hasSurvey,
         surface: e.surface,
         thread: await currentSetup($),
+        start: await read($, defaults),
+        isStatusLineOn: await read($, isStatusLineOn),
       },
       bandActions($),
     )

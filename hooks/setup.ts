@@ -16,6 +16,7 @@ export const STORE_KEYS = {
   knownSkills: 'knownSkills',
   collapsedGroups: 'collapsedGroups',
   descriptionMode: 'descriptionMode',
+  statusLine: 'statusLine',
 } as const
 
 export function isStringList(value: unknown): value is string[] {

@@ -26,6 +26,26 @@ describe('opening', () => {
   }
 })
 
+describe('mod settings', () => {
+  test('sit under the cards on desktop, with a quiet status line switch', async ($, on) => {
+    engine(on)
+    await start($)
+    const ui = await pane($, 'desktop')
+
+    expect(await ui.find({ type: 'Text', text: 'Mod settings' })).toBeDefined()
+    expect((await ui.find({ key: 'status-line-on' }))?.props.variant).toBe('secondary')
+    expect((await ui.find({ key: 'status-line-off' }))?.props.dimColor).toBe(true)
+    expect((await ui.find({ key: 'memory-off' }))?.props.variant).toBe('primary')
+  })
+
+  test("don't show in the terminal, which has no status line", async ($, on) => {
+    engine(on)
+    await start($)
+
+    expect(await (await pane($, 'terminal')).find({ key: 'status-line-on' })).toBeUndefined()
+  })
+})
+
 describe('status card', () => {
   test('shows this thread against the defaults, and flags a difference', async ($, on) => {
     engine(on)

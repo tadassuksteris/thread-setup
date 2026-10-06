@@ -71,13 +71,14 @@ Sessions started after the pull load the new version.
 | `/mem status` | Prints the status, including what was kept out so far |
 | `/mem default on`, `/mem default off` | Sets memory for new threads |
 
-The panel has three parts:
+The panel has:
 
 - A status card comparing this thread with your defaults, with Reset and Save as default.
 - The memory switch.
 - The skill list, grouped as your skills, each plugin's skills, and built-in skills. Click a heading to fold its group, and use the filter, the All/On/Off view or the description length to find a skill. Filtering down to three skills or fewer shows their full descriptions.
+- On desktop, Mod settings at the bottom, with the switch for the status line above the prompt.
 
-In the terminal, a new thread opens with the memory switch above the prompt, and the footer shows `memory off` and the number of skills off. The desktop app starts a session only when you send the first message, so there's nothing to show before that. Send `/setup` as the first message to choose before Claude reads anything. Once the session is running, the desktop app shows a status line above the prompt with a Change button.
+In the terminal, a new thread opens with the memory switch above the prompt, and the footer shows `memory off` and the number of skills off. The desktop app starts a session only when you send the first message, so there's nothing to show before that. Send `/setup` as the first message to choose before Claude reads anything. Once the session is running, the desktop app shows a status line above the prompt: memory, skills off, and whether the thread differs from your defaults, with a Change button and a close control. Closing it switches it off in every thread; the switch under Mod settings in the panel turns it back on.
 
 ## When a change takes effect
 

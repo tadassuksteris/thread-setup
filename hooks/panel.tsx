@@ -25,6 +25,8 @@ export type PanelInput = {
   view: SkillView
   describe: DescriptionMode
   collapsed: readonly string[]
+  /** The desktop status line above the prompt is wanted. */
+  isStatusLineOn: boolean
   surface: RenderSurface
   width: number
 }
@@ -39,6 +41,7 @@ export type PanelActions = {
   setDescriptionMode: (mode: DescriptionMode) => unknown
   resetToDefaults: () => unknown
   saveAsDefaults: () => unknown
+  setStatusLine: (isOn: boolean) => unknown
 }
 
 // Controls whose label changes ("On" to "Off", a count) sit in slots of a fixed
@@ -213,30 +216,68 @@ function statusCard(ui: Ui, panel: Panel, actions: PanelActions) {
   )
 }
 
+/**
+ * An On/Off pair. The thread's switches mark the side that's set as the main
+ * button; a quiet one keeps both plain and dims the side that isn't.
+ */
+function onOffSwitch(
+  ui: Ui,
+  prefix: string,
+  isOn: boolean,
+  onSet: (isOn: boolean) => unknown,
+  isQuiet = false,
+) {
+  const { Box, Button } = ui
+  const side = (label: 'On' | 'Off', isSet: boolean) => (
+    <Button
+      key={`${prefix}-${label.toLowerCase()}`}
+      label={label}
+      variant={isSet && !isQuiet ? 'primary' : 'secondary'}
+      dimColor={isQuiet && !isSet}
+      onPress={() => onSet(label === 'On')}
+    />
+  )
+
+  return (
+    <Box gap={1} flexShrink={0}>
+      {side('On', isOn)}
+      {side('Off', !isOn)}
+    </Box>
+  )
+}
+
 function memoryCard(ui: Ui, panel: Panel, actions: PanelActions) {
-  const { Box, Button, Text } = ui
-  const mode = panel.thread.memory
+  const { Box, Text } = ui
 
   return (
     <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
       <Box justifyContent="space-between" alignItems="center">
         <Text bold>Memory</Text>
-        <Box gap={1}>
-          <Button
-            key="memory-on"
-            label="On"
-            variant={mode === 'on' ? 'primary' : 'secondary'}
-            onPress={() => actions.setMemory('on')}
-          />
-          <Button
-            key="memory-off"
-            label="Off"
-            variant={mode === 'off' ? 'primary' : 'secondary'}
-            onPress={() => actions.setMemory('off')}
-          />
-        </Box>
+        {onOffSwitch(ui, 'memory', panel.thread.memory === 'on', isOn =>
+          actions.setMemory(isOn ? 'on' : 'off'),
+        )}
       </Box>
       <Text dimColor>Saved memories for this project. A change applies from your next message.</Text>
+    </Box>
+  )
+}
+
+/**
+ * The mod's own settings, apart from the thread's: below the cards, under a
+ * dim label rather than a heading, with a quiet switch. Its one setting is the
+ * status line, which only the desktop app draws.
+ */
+function modSettings(ui: Ui, panel: Panel, actions: PanelActions) {
+  const { Box, Text } = ui
+
+  return (
+    <Box flexDirection="column" paddingX={1} marginTop={1}>
+      <Text dimColor>Mod settings</Text>
+      <Box justifyContent="space-between" alignItems="center">
+        <Text>Status line above the prompt</Text>
+        {onOffSwitch(ui, 'status-line', panel.isStatusLineOn, actions.setStatusLine, true)}
+      </Box>
+      <Text dimColor>Shows this thread's setup in every thread. Closing it there switches this off.</Text>
     </Box>
   )
 }
@@ -418,6 +459,7 @@ export function panelView(
       {statusCard(ui, panel, actions)}
       {memoryCard(ui, panel, actions)}
       {skillsCard(ui, Input, panel, actions)}
+      {panel.surface === 'desktop' && modSettings(ui, panel, actions)}
     </Box>
   )
 }

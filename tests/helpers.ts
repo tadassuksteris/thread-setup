@@ -45,10 +45,11 @@ type EngineOptions = {
 
 /**
  * Stands in for the engine beneath the plugin. Every hook goes in before the
- * test's first call on $. Answers with the panes the plugin asked to open.
+ * test's first call on $. Answers with the panes the plugin asked to open and
+ * the notices it showed.
  */
 export function engine(on: On, options: EngineOptions = {}) {
-  const seen = { opened: [] as string[] }
+  const seen = { opened: [] as string[], toasts: [] as string[] }
 
   mock.store(on, options.store ?? {})
   mock.env(on, { HOME })
@@ -67,7 +68,10 @@ export function engine(on: On, options: EngineOptions = {}) {
   on('skill.prompt', ($, e) => ({ text: e.text }))
   on('tool.call', () => ({ result: 'ran' }))
   on('ui.invalidate', () => ({ value: undefined }))
-  on('ui.toast', () => ({ value: undefined }))
+  on('ui.toast', ($, e) => {
+    seen.toasts.push(e.text)
+    return { value: undefined }
+  })
   on('ui.open', ($, e) => {
     seen.opened.push(e.id)
     return { value: { isPlaced: true } }

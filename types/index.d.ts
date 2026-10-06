@@ -40,6 +40,8 @@ declare module 'claude-code' {
       keptOut: KeptOut
       /** The switch row above the prompt. */
       isBandOpen: boolean
+      /** The desktop status line above the prompt; closing it switches it off. Kept across threads. */
+      isStatusLineOn: boolean
       skills: SkillInfo[]
       /** False while `skills` is the last thread's list, before this thread's arrives. */
       isSkillListLive: boolean

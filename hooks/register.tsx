@@ -93,12 +93,21 @@ async function isMemoryOn($: EngineInterface) {
   return (await read($, memory)) === 'on'
 }
 
-async function setMemory($: EngineInterface, mode: MemoryMode) {
-  await update($, memory, () => mode)
-  // Each of these answers is cached by the engine; ask again under the new mode.
+// Each of these answers is cached by the engine; ask again under the new mode.
+function askAgainForMemory($: EngineInterface) {
   $.ui.invalidate('prompt.section')
   $.ui.invalidate('prompt.context')
   $.ui.invalidate('prompt.attachment')
+}
+
+async function setMemory($: EngineInterface, mode: MemoryMode) {
+  await update($, memory, () => mode)
+  askAgainForMemory($)
+}
+
+async function toggleMemory($: EngineInterface) {
+  await update($, memory, mode => (mode === 'on' ? 'off' : 'on'))
+  askAgainForMemory($)
 }
 
 async function setSkillsOff($: EngineInterface, names: readonly string[]) {
@@ -160,6 +169,11 @@ async function setStatusLine($: EngineInterface, isOn: boolean) {
 }
 
 /** Closing the status line is switching it off; say where it comes back from. */
+async function toggleStatusLine($: EngineInterface) {
+  await update($, isStatusLineOn, isOn => !isOn)
+  await $.store.set(STORE_KEYS.statusLine, (await read($, isStatusLineOn)) ? 'on' : 'off')
+}
+
 async function closeStatusLine($: EngineInterface) {
   await setStatusLine($, false)
   $.ui.toast('Status line off. Turn it back on in /setup, under Mod settings.')
@@ -209,7 +223,7 @@ async function readPanelInput($: EngineInterface, surface: PanelInput['surface']
 // the ones the drawing saw.
 function panelActions($: EngineInterface): PanelActions {
   return {
-    setMemory: mode => setMemory($, mode),
+    toggleMemory: () => toggleMemory($),
     toggleSkill: name => toggleSkill($, name),
     setAllSkills: isOn => setAllSkills($, isOn),
     toggleGroup: label => toggleGroup($, label),
@@ -221,13 +235,13 @@ function panelActions($: EngineInterface): PanelActions {
     },
     resetToDefaults: () => resetToDefaults($),
     saveAsDefaults: () => saveThreadAsDefaults($),
-    setStatusLine: isOn => setStatusLine($, isOn),
+    toggleStatusLine: () => toggleStatusLine($),
   }
 }
 
 function bandActions($: EngineInterface): BandActions {
   return {
-    setMemory: mode => setMemory($, mode),
+    toggleMemory: () => toggleMemory($),
     openPanel: () => openPanel($),
     close: () => setBandOpen($, false),
     closeStatusLine: () => closeStatusLine($),

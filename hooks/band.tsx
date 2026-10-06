@@ -1,7 +1,8 @@
 import type { RenderElement, RenderSurface } from 'claude-code'
 
-import type { MemoryMode, Setup } from '../types'
-import type { Ui } from './panel'
+import type { Setup } from '../types'
+import { action, toggle } from './controls'
+import type { Ui } from './controls'
 import { isSameSetup } from './setup'
 import { plural } from './text'
 
@@ -17,7 +18,7 @@ export type BandInput = {
 }
 
 export type BandActions = {
-  setMemory: (mode: MemoryMode) => unknown
+  toggleMemory: () => unknown
   openPanel: () => unknown
   close: () => unknown
   closeStatusLine: () => unknown
@@ -25,7 +26,7 @@ export type BandActions = {
 
 /** The desktop's stand-in for the footer labels it doesn't draw: this thread's setup, at a glance. */
 function statusLine(ui: Ui, input: BandInput, actions: BandActions) {
-  const { Box, Button, Text } = ui
+  const { Box, Text } = ui
   const { memory, skillsOff } = input.thread
   const isMemoryOn = memory === 'on'
   const offCount = skillsOff.length
@@ -51,44 +52,23 @@ function statusLine(ui: Ui, input: BandInput, actions: BandActions) {
         {!isSameSetup(input.thread, input.start) && <Text dimColor>Differs from your defaults</Text>}
       </Box>
       <Box alignItems="center" gap={1} flexShrink={0}>
-        <Button key="change" label="Change" dimColor onPress={() => actions.openPanel()} />
-        {/* A desktop draws a dismiss button as its own close control, at the band's end. */}
-        <Button
-          key="close-status"
-          label="Close"
-          role="dismiss"
-          dimColor
-          onPress={() => actions.closeStatusLine()}
-        />
+        {action(ui, 'change', 'Change', actions.openPanel)}
+        {action(ui, 'close-status', 'Close', actions.closeStatusLine, { isDismiss: true })}
       </Box>
     </Box>
   )
 }
 
 function switchRow(ui: Ui, input: BandInput, actions: BandActions) {
-  const { Box, Button, Text } = ui
-  const mode = input.thread.memory
+  const { Box, Text } = ui
 
   return (
     <Box gap={1} alignItems="center">
       <Text dimColor>Memory for this thread</Text>
-      <Box gap={1}>
-        <Button
-          key="memory-on"
-          label="On"
-          variant={mode === 'on' ? 'primary' : 'secondary'}
-          onPress={() => actions.setMemory('on')}
-        />
-        <Button
-          key="memory-off"
-          label="Off"
-          variant={mode === 'off' ? 'primary' : 'secondary'}
-          onPress={() => actions.setMemory('off')}
-        />
-      </Box>
+      {toggle(ui, 'memory', input.thread.memory === 'on', actions.toggleMemory, input.surface === 'terminal')}
       <Text dimColor>·</Text>
-      <Button key="more" label="Skills & more" dimColor onPress={() => actions.openPanel()} />
-      <Button key="dismiss" label="Dismiss" role="dismiss" dimColor onPress={() => actions.close()} />
+      {action(ui, 'more', 'Skills & more', actions.openPanel)}
+      {action(ui, 'dismiss', 'Dismiss', actions.close, { isDismiss: true })}
     </Box>
   )
 }

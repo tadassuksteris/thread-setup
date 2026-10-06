@@ -51,11 +51,11 @@ describe('defaults', () => {
     await start($)
     await listing($)
     const ui = await pane($)
-    await ui.press({ key: 'memory-on' })
+    await ui.press({ key: 'memory' })
     await ui.press({ key: 'skill-dataviz' })
     await ui.press({ key: 'save-default' })
 
-    await ui.press({ key: 'memory-off' })
+    await ui.press({ key: 'memory' })
     await ui.press({ key: 'skill-dataviz' })
     await $.classic.SessionStart({ source: 'clear' })
 

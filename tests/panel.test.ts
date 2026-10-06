@@ -27,22 +27,67 @@ describe('opening', () => {
 })
 
 describe('mod settings', () => {
-  test('sit under the cards on desktop, with a quiet status line switch', async ($, on) => {
+  test('sit under the cards on desktop, with the status line switch', async ($, on) => {
     engine(on)
     await start($)
     const ui = await pane($, 'desktop')
 
     expect(await ui.find({ type: 'Text', text: 'Mod settings' })).toBeDefined()
-    expect((await ui.find({ key: 'status-line-on' }))?.props.variant).toBe('secondary')
-    expect((await ui.find({ key: 'status-line-off' }))?.props.dimColor).toBe(true)
-    expect((await ui.find({ key: 'memory-off' }))?.props.variant).toBe('primary')
+    expect((await ui.find({ key: 'status-line' }))?.props.label).toBe('On')
   })
 
   test("don't show in the terminal, which has no status line", async ($, on) => {
     engine(on)
     await start($)
 
-    expect(await (await pane($, 'terminal')).find({ key: 'status-line-on' })).toBeUndefined()
+    expect(await (await pane($, 'terminal')).find({ key: 'status-line' })).toBeUndefined()
+  })
+})
+
+describe('controls', () => {
+  test('every switch is one button: bright when on, dimmed when off', async ($, on) => {
+    engine(on)
+    await start($)
+    await listing($)
+    const ui = await pane($, 'desktop')
+    const look = async (key: string) => {
+      const props = (await ui.find({ key }))?.props
+
+      return [props?.label, props?.variant, props?.dimColor]
+    }
+
+    expect(await look('memory')).toEqual(['Off', 'secondary', true])
+    expect(await look('status-line')).toEqual(['On', 'primary', false])
+    expect(await look('skill-crisp')).toEqual(['On', 'primary', false])
+
+    await ui.press({ key: 'memory' })
+    await ui.press({ key: 'skill-crisp' })
+    expect(await look('memory')).toEqual(['On', 'primary', false])
+    expect(await look('skill-crisp')).toEqual(['Off', 'secondary', true])
+  })
+
+  test('two quick presses flip a switch on and back off', async ($, on) => {
+    engine(on)
+    await start($)
+    const ui = await pane($, 'desktop')
+    await Promise.all([ui.press({ key: 'memory' }), ui.press({ key: 'memory' })])
+
+    expect((await ui.find({ key: 'memory' }))?.props.label).toBe('Off')
+  })
+
+  test('an action that would do nothing now is dimmed', async ($, on) => {
+    engine(on)
+    await start($)
+    await listing($)
+    const ui = await pane($, 'desktop')
+    const isDim = async (key: string) => (await ui.find({ key }))?.props.dimColor
+
+    expect([await isDim('skills-all-on'), await isDim('skills-all-off')]).toEqual([true, false])
+    expect([await isDim('reset-default'), await isDim('save-default')]).toEqual([true, true])
+
+    await ui.press({ key: 'skill-crisp' })
+    expect([await isDim('skills-all-on'), await isDim('reset-default')]).toEqual([false, false])
+    expect((await ui.find({ key: 'save-default' }))?.props.variant).toBe('primary')
   })
 })
 

@@ -99,6 +99,7 @@ Changing skills mid-thread sends the skill list again, so the next request can't
 | --- | --- |
 | `hooks/register.tsx` | The hooks, and every function that touches the engine (`$`) |
 | `hooks/panel.tsx`, `hooks/band.tsx` | The panel and the row above the prompt, as views of plain data |
+| `hooks/controls.tsx` | The buttons both views draw: switches, choices and actions, in one style |
 | `hooks/skills.ts` | Reading and filtering the skill list, grouping skills |
 | `hooks/memory.ts` | Deciding whether a tool call touches auto memory |
 | `hooks/setup.ts` | Comparing setups, store keys and checks on stored values |

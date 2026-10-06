@@ -9,8 +9,8 @@ describe('the switch row in a new thread', () => {
       await start($)
       const ui = await band($, surface)
 
-      expect(await ui.find({ key: 'memory-on' })).toBeDefined()
-      await ui.press({ key: 'memory-on' })
+      expect(await ui.find({ key: 'memory' })).toBeDefined()
+      await ui.press({ key: 'memory' })
 
       expect((await context($)).instructionFiles).toHaveLength(2)
     })
@@ -21,10 +21,10 @@ describe('the switch row in a new thread', () => {
     await start($)
 
     await submit($, '/model')
-    expect(await (await band($)).find({ key: 'memory-on' })).toBeDefined()
+    expect(await (await band($)).find({ key: 'memory' })).toBeDefined()
 
     await submit($, 'hello')
-    expect(await (await band($)).find({ key: 'memory-on' })).toBeUndefined()
+    expect(await (await band($)).find({ key: 'memory' })).toBeUndefined()
   })
 
   test('comes back after /clear', async ($, on) => {
@@ -33,7 +33,7 @@ describe('the switch row in a new thread', () => {
     await submit($, 'hello')
     await $.classic.SessionStart({ source: 'clear' })
 
-    expect(await (await band($)).find({ key: 'memory-on' })).toBeDefined()
+    expect(await (await band($)).find({ key: 'memory' })).toBeDefined()
   })
 
   test('bare /mem reopens it mid-thread; /mem status does not', async ($, on) => {
@@ -42,10 +42,10 @@ describe('the switch row in a new thread', () => {
     await submit($, 'hello')
 
     await mem($, 'status')
-    expect(await (await band($)).find({ key: 'memory-on' })).toBeUndefined()
+    expect(await (await band($)).find({ key: 'memory' })).toBeUndefined()
 
     await mem($, '')
-    expect(await (await band($)).find({ key: 'memory-on' })).toBeDefined()
+    expect(await (await band($)).find({ key: 'memory' })).toBeDefined()
   })
 })
 
@@ -53,10 +53,10 @@ describe('on desktop', () => {
   test('the session starts without the switch row, until /mem opens it', async ($, on) => {
     engine(on)
     await startOnDesktop($)
-    expect(await (await band($, 'desktop')).find({ key: 'memory-on' })).toBeUndefined()
+    expect(await (await band($, 'desktop')).find({ key: 'memory' })).toBeUndefined()
 
     await mem($, '')
-    expect(await (await band($, 'desktop')).find({ key: 'memory-on' })).toBeDefined()
+    expect(await (await band($, 'desktop')).find({ key: 'memory' })).toBeDefined()
   })
 
   test('the closed band keeps a status line that opens the panel', async ($, on) => {
@@ -86,13 +86,12 @@ describe('on desktop', () => {
     const { toasts } = engine(on)
     await startOnDesktop($)
     const ui = await pane($)
-    expect((await ui.find({ key: 'status-line-off' }))?.props.dimColor).toBe(true)
+    expect((await ui.find({ key: 'status-line' }))?.props.label).toBe('On')
 
     await (await band($, 'desktop')).press({ key: 'close-status' })
 
     expect(await (await band($, 'desktop')).find({ key: 'change' })).toBeUndefined()
-    expect((await ui.find({ key: 'status-line-on' }))?.props.dimColor).toBe(true)
-    expect((await ui.find({ key: 'status-line-off' }))?.props.dimColor).toBe(false)
+    expect((await ui.find({ key: 'status-line' }))?.props.label).toBe('Off')
     expect(toasts).toEqual(['Status line off. Turn it back on in /setup, under Mod settings.'])
   })
 
@@ -104,7 +103,7 @@ describe('on desktop', () => {
     await (await band($, 'desktop')).press({ key: 'dismiss' })
     expect(await (await band($, 'desktop')).find({ key: 'change' })).toBeUndefined()
 
-    await (await pane($)).press({ key: 'status-line-on' })
+    await (await pane($)).press({ key: 'status-line' })
     expect(await (await band($, 'desktop')).find({ key: 'change' })).toBeDefined()
   })
 
@@ -124,7 +123,7 @@ describe('in the terminal', () => {
     const ui = await band($)
 
     expect(await ui.find({ key: 'change' })).toBeUndefined()
-    expect(await ui.find({ key: 'memory-on' })).toBeUndefined()
+    expect(await ui.find({ key: 'memory' })).toBeUndefined()
   })
 
   test('the footer says memory is off and counts skills off', async ($, on) => {

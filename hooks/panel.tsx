@@ -1,6 +1,8 @@
 import type { Elements, RenderElement, RenderSurface } from 'claude-code'
 
-import type { DescriptionMode, MemoryMode, Setup, SkillInfo, SkillView } from '../types'
+import type { DescriptionMode, Setup, SkillInfo, SkillView } from '../types'
+import { action, choice, slotFor, toggle, toggleWidth } from './controls'
+import type { Ui } from './controls'
 import { groupSkills, shortName } from './skills'
 import { isSameSetup } from './setup'
 import { clip } from './text'
@@ -11,7 +13,6 @@ import { clip } from './text'
 export const PANE_ID = 'thread-setup'
 export const PANE_TITLE = 'Thread setup'
 
-export type Ui = Elements[RenderSurface]
 type InputElement = Elements['terminal']['Input']
 
 /** What the panel draws from, read from the session's values. */
@@ -32,7 +33,7 @@ export type PanelInput = {
 }
 
 export type PanelActions = {
-  setMemory: (mode: MemoryMode) => unknown
+  toggleMemory: () => unknown
   toggleSkill: (name: string) => unknown
   setAllSkills: (isOn: boolean) => unknown
   toggleGroup: (label: string) => unknown
@@ -41,15 +42,9 @@ export type PanelActions = {
   setDescriptionMode: (mode: DescriptionMode) => unknown
   resetToDefaults: () => unknown
   saveAsDefaults: () => unknown
-  setStatusLine: (isOn: boolean) => unknown
+  toggleStatusLine: () => unknown
 }
 
-// Controls whose label changes ("On" to "Off", a count) sit in slots of a fixed
-// width, so nothing beside them moves: the longest label, and room for the
-// terminal's "[ " and " ]", or a desktop pill's padding.
-const TOGGLE_LABELS = ['On', 'Off'] as const
-const SLOT_ROOM_TERMINAL = 4
-const SLOT_ROOM_DESKTOP = 3
 // Rows indent past the fold arrow of their group heading.
 const INDENT_TERMINAL = 2
 const INDENT_DESKTOP = 5
@@ -96,54 +91,6 @@ function toPanel(input: PanelInput): Panel {
   }
 }
 
-function slotFor(labels: readonly string[], isTerminal: boolean) {
-  const room = isTerminal ? SLOT_ROOM_TERMINAL : SLOT_ROOM_DESKTOP
-
-  return Math.max(...labels.map(label => label.length)) + room
-}
-
-/**
- * A small segmented choice. Given a slot, each option sits in one of that
- * width, for labels that change (a count); without, they sit side by side.
- */
-function choice<T extends string>(
-  ui: Ui,
-  prefix: string,
-  selected: T,
-  options: readonly { value: T; label: string }[],
-  onPick: (value: T) => unknown,
-  slot?: number,
-) {
-  const { Box, Button } = ui
-  const button = (option: { value: T; label: string }) => (
-    <Button
-      key={`${prefix}-${option.value}`}
-      label={option.label}
-      variant={selected === option.value ? 'primary' : 'secondary'}
-      dimColor={selected !== option.value}
-      onPress={() => onPick(option.value)}
-    />
-  )
-
-  if (slot === undefined) {
-    return (
-      <Box flexShrink={0} gap={1}>
-        {options.map(button)}
-      </Box>
-    )
-  }
-
-  return (
-    <Box flexShrink={0}>
-      {options.map(option => (
-        <Box key={`${prefix}-slot-${option.value}`} width={slot} justifyContent="center">
-          {button(option)}
-        </Box>
-      ))}
-    </Box>
-  )
-}
-
 /** One line of the status grid: this thread's, or what new threads start with. */
 function statusLine(ui: Ui, panel: Panel, label: string, setup: Setup, isMain: boolean) {
   const { Box, Text } = ui
@@ -182,7 +129,7 @@ function statusLine(ui: Ui, panel: Panel, label: string, setup: Setup, isMain: b
 }
 
 function statusCard(ui: Ui, panel: Panel, actions: PanelActions) {
-  const { Box, Button, Text } = ui
+  const { Box, Text } = ui
 
   return (
     <Box
@@ -202,46 +149,13 @@ function statusCard(ui: Ui, panel: Panel, actions: PanelActions) {
           <Text color="yellow">This thread differs from your defaults.</Text>
         )}
         <Box flexShrink={0} gap={1}>
-          <Button key="reset-default" label="Reset" dimColor onPress={() => actions.resetToDefaults()} />
-          <Button
-            key="save-default"
-            label="Save as default"
-            variant={panel.isAtDefaults ? 'secondary' : 'primary'}
-            dimColor={panel.isAtDefaults}
-            onPress={() => actions.saveAsDefaults()}
-          />
+          {action(ui, 'reset-default', 'Reset', actions.resetToDefaults, { isIdle: panel.isAtDefaults })}
+          {action(ui, 'save-default', 'Save as default', actions.saveAsDefaults, {
+            isIdle: panel.isAtDefaults,
+            isMain: true,
+          })}
         </Box>
       </Box>
-    </Box>
-  )
-}
-
-/**
- * An On/Off pair. The thread's switches mark the side that's set as the main
- * button; a quiet one keeps both plain and dims the side that isn't.
- */
-function onOffSwitch(
-  ui: Ui,
-  prefix: string,
-  isOn: boolean,
-  onSet: (isOn: boolean) => unknown,
-  isQuiet = false,
-) {
-  const { Box, Button } = ui
-  const side = (label: 'On' | 'Off', isSet: boolean) => (
-    <Button
-      key={`${prefix}-${label.toLowerCase()}`}
-      label={label}
-      variant={isSet && !isQuiet ? 'primary' : 'secondary'}
-      dimColor={isQuiet && !isSet}
-      onPress={() => onSet(label === 'On')}
-    />
-  )
-
-  return (
-    <Box gap={1} flexShrink={0}>
-      {side('On', isOn)}
-      {side('Off', !isOn)}
     </Box>
   )
 }
@@ -253,9 +167,7 @@ function memoryCard(ui: Ui, panel: Panel, actions: PanelActions) {
     <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
       <Box justifyContent="space-between" alignItems="center">
         <Text bold>Memory</Text>
-        {onOffSwitch(ui, 'memory', panel.thread.memory === 'on', isOn =>
-          actions.setMemory(isOn ? 'on' : 'off'),
-        )}
+        {toggle(ui, 'memory', panel.thread.memory === 'on', actions.toggleMemory, panel.isTerminal)}
       </Box>
       <Text dimColor>Saved memories for this project. A change applies from your next message.</Text>
     </Box>
@@ -264,8 +176,8 @@ function memoryCard(ui: Ui, panel: Panel, actions: PanelActions) {
 
 /**
  * The mod's own settings, apart from the thread's: below the cards, under a
- * dim label rather than a heading, with a quiet switch. Its one setting is the
- * status line, which only the desktop app draws.
+ * dim label rather than a heading. Its one setting is the status line, which
+ * only the desktop app draws.
  */
 function modSettings(ui: Ui, panel: Panel, actions: PanelActions) {
   const { Box, Text } = ui
@@ -275,7 +187,7 @@ function modSettings(ui: Ui, panel: Panel, actions: PanelActions) {
       <Text dimColor>Mod settings</Text>
       <Box justifyContent="space-between" alignItems="center">
         <Text>Status line above the prompt</Text>
-        {onOffSwitch(ui, 'status-line', panel.isStatusLineOn, actions.setStatusLine, true)}
+        {toggle(ui, 'status-line', panel.isStatusLineOn, actions.toggleStatusLine, panel.isTerminal)}
       </Box>
       <Text dimColor>Shows this thread's setup in every thread. Closing it there switches this off.</Text>
     </Box>
@@ -283,12 +195,12 @@ function modSettings(ui: Ui, panel: Panel, actions: PanelActions) {
 }
 
 function skillRow(ui: Ui, panel: Panel, actions: PanelActions, skill: SkillInfo) {
-  const { Box, Button, Text } = ui
+  const { Box, Text } = ui
   const isOff = panel.off.has(skill.name)
   const name = shortName(skill.name)
   const indent = panel.isTerminal ? INDENT_TERMINAL : INDENT_DESKTOP
-  const toggleSlot = slotFor(TOGGLE_LABELS, panel.isTerminal)
-  const blurb = clip(skill.description, Math.max(24, panel.width - name.length - indent - toggleSlot - 14))
+  const room = panel.width - name.length - indent - toggleWidth(panel.isTerminal) - 14
+  const blurb = clip(skill.description, Math.max(24, room))
 
   return (
     <Box
@@ -313,14 +225,7 @@ function skillRow(ui: Ui, panel: Panel, actions: PanelActions, skill: SkillInfo)
             </Text>
           )}
         </Box>
-        <Box width={toggleSlot} justifyContent="center" flexShrink={0}>
-          <Button
-            key={`skill-${skill.name}`}
-            label={isOff ? 'Off' : 'On'}
-            dimColor={isOff}
-            onPress={() => actions.toggleSkill(skill.name)}
-          />
-        </Box>
+        {toggle(ui, `skill-${skill.name}`, !isOff, () => actions.toggleSkill(skill.name), panel.isTerminal)}
       </Box>
       {panel.isFull && (
         <Box paddingLeft={2} paddingBottom={1}>
@@ -371,7 +276,7 @@ function skillGroup(
 }
 
 function skillsCard(ui: Ui, Input: InputElement | undefined, panel: Panel, actions: PanelActions) {
-  const { Box, Button, Text } = ui
+  const { Box, Text } = ui
   const total = panel.skills.length
   const offCount = panel.skills.filter(skill => panel.off.has(skill.name)).length
   // Sized for the largest count the tabs can show, so a count that grows moves nothing.
@@ -383,8 +288,10 @@ function skillsCard(ui: Ui, Input: InputElement | undefined, panel: Panel, actio
         <Box justifyContent="space-between" alignItems="center">
           <Text bold>Skills</Text>
           <Box alignItems="center" gap={1}>
-            <Button key="skills-all-on" label="All on" dimColor onPress={() => actions.setAllSkills(true)} />
-            <Button key="skills-all-off" label="All off" dimColor onPress={() => actions.setAllSkills(false)} />
+            {action(ui, 'skills-all-on', 'All on', () => actions.setAllSkills(true), { isIdle: offCount === 0 })}
+            {action(ui, 'skills-all-off', 'All off', () => actions.setAllSkills(false), {
+              isIdle: total > 0 && offCount === total,
+            })}
           </Box>
         </Box>
         <Text dimColor>Off hides a skill from Claude in this thread, and blocks it if called.</Text>

@@ -6,6 +6,13 @@
     "name": "tadassuksteris",
     "url": "https://github.com/tadassuksteris"
   },
+  "homepage": "https://github.com/tadassuksteris/thread-setup",
+  "repository": "https://github.com/tadassuksteris/thread-setup",
   "license": "MIT",
+  "keywords": [
+    "memory",
+    "skills",
+    "mod"
+  ],
   "types": "./types/index.d.ts"
 }

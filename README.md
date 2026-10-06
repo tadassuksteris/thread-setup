@@ -2,7 +2,7 @@
 
 A Claude Code mod for choosing, per thread, whether Claude uses auto memory and which skills it can see. `/setup` opens a panel with both switches and saves what new threads start with.
 
-Built and tested on Claude Code 2.1.291, in the terminal and in the desktop app's Code tab.
+Built and tested on Claude Code 2.1.291 on macOS, in the terminal and in the desktop app's Code tab.
 
 ## What it does
 
@@ -18,8 +18,13 @@ Built and tested on Claude Code 2.1.291, in the terminal and in the desktop app'
 
 ## Install
 
-1. Put this folder somewhere permanent, for example `~/.claude/mods/thread-setup`.
-2. Add this to `~/.claude/settings.json`:
+1. Clone the repo:
+
+   ```bash
+   git clone https://github.com/tadassuksteris/thread-setup ~/.claude/mods/thread-setup
+   ```
+
+2. Add these keys to `~/.claude/settings.json`, merged with what's already there:
 
    ```json
    {
@@ -30,9 +35,31 @@ Built and tested on Claude Code 2.1.291, in the terminal and in the desktop app'
    }
    ```
 
-   Auto memory has to be on: the mod can keep memory out of a thread, but it can't switch memory on. If `CLAUDE_CODE_PLUGIN_DIRS` already lists folders, add this one with a `:` between them.
+   Auto memory has to be on: the mod can keep memory out of a thread, but it can't switch memory on. If `CLAUDE_CODE_PLUGIN_DIRS` already lists folders, add this one after a `:`.
 
-3. Start a new session. To try the mod without changing settings, run `claude --plugin-dir ~/.claude/mods/thread-setup`.
+3. Start a new session, in the terminal or the desktop app, and run `/setup`. The panel should open.
+
+The mod starts every thread with memory off. If you'd rather have memory on by default, run `/mem default on` once.
+
+To try the mod for one terminal session without changing settings:
+
+```bash
+claude --plugin-dir ~/.claude/mods/thread-setup
+```
+
+## Update
+
+```bash
+git -C ~/.claude/mods/thread-setup pull
+```
+
+Sessions started after the pull load the new version.
+
+## Uninstall
+
+1. In `~/.claude/settings.json`, remove the `CLAUDE_CODE_PLUGIN_DIRS` entry. Set `autoMemoryEnabled` back to `false` if you had it off before.
+2. Delete `~/.claude/mods/thread-setup`.
+3. To clear the choices the mod saved, delete `~/.claude/plugins/store/thread-setup_*.json`.
 
 ## Use
 

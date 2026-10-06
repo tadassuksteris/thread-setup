@@ -8,7 +8,7 @@ import { plural } from './text'
 
 // Like the panel, a view: plain values in, callbacks out.
 
-export type BandInput = {
+type BandInput = {
   isOpen: boolean
   hasSurvey: boolean
   surface: RenderSurface

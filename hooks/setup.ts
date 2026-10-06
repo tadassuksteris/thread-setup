@@ -2,6 +2,7 @@ import type { KeptOut, Setup, SkillInfo } from '../types'
 
 // What a thread starts with until the person saves defaults of their own.
 export const FACTORY_SETUP: Setup = { memory: 'off', skillsOff: [] }
+
 export const NOTHING_KEPT_OUT: KeptOut = {
   isSectionDropped: false,
   files: [],
@@ -41,7 +42,7 @@ export function toggled(list: readonly string[], item: string) {
 
 /** A later listing's skills over the earlier ones, by name; sorted. */
 export function mergeSkills(earlier: readonly SkillInfo[], later: readonly SkillInfo[]) {
-  return [...earlier.filter(skill => !later.some(other => other.name === skill.name)), ...later].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  )
+  const kept = earlier.filter(skill => !later.some(other => other.name === skill.name))
+
+  return [...kept, ...later].sort((a, b) => a.name.localeCompare(b.name))
 }

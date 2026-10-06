@@ -168,12 +168,13 @@ async function setStatusLine($: EngineInterface, isOn: boolean) {
   await $.store.set(STORE_KEYS.statusLine, isOn ? 'on' : 'off')
 }
 
-/** Closing the status line is switching it off; say where it comes back from. */
+/** Flips the status line, from whatever it is when pressed. */
 async function toggleStatusLine($: EngineInterface) {
   await update($, isStatusLineOn, isOn => !isOn)
   await $.store.set(STORE_KEYS.statusLine, (await read($, isStatusLineOn)) ? 'on' : 'off')
 }
 
+/** Closing the status line is switching it off; say where it comes back from. */
 async function closeStatusLine($: EngineInterface) {
   await setStatusLine($, false)
   $.ui.toast('Status line off. Turn it back on in /setup, under Mod settings.')
@@ -201,8 +202,12 @@ async function openPanel($: EngineInterface) {
 
 // ── What the views draw from, and what their buttons do ──────────────────
 
-async function readPanelInput($: EngineInterface, surface: PanelInput['surface'], width: number) {
-  const input: PanelInput = {
+async function readPanelInput(
+  $: EngineInterface,
+  surface: PanelInput['surface'],
+  width: number,
+): Promise<PanelInput> {
+  return {
     thread: await currentSetup($),
     start: await read($, defaults),
     skills: await read($, skills),
@@ -215,8 +220,6 @@ async function readPanelInput($: EngineInterface, surface: PanelInput['surface']
     surface,
     width,
   }
-
-  return input
 }
 
 // Handlers run later, on a press: each reads the values it needs then, never

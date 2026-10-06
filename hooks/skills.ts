@@ -4,8 +4,8 @@ import type { SkillInfo } from '../types'
 // description sometimes runs on over the lines after it.
 const SKILL_LINE = /^- (\S+): ?(.*)$/
 
-export const GROUP_YOURS = 'Your skills'
-export const GROUP_BUILT_IN = 'Built in'
+const GROUP_YOURS = 'Your skills'
+const GROUP_BUILT_IN = 'Built in'
 
 type ListingEntry = { name: string; lines: string[] }
 type Listing = { header: string[]; entries: ListingEntry[] }

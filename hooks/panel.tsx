@@ -48,6 +48,9 @@ export type PanelActions = {
 // Rows indent past the fold arrow of their group heading.
 const INDENT_TERMINAL = 2
 const INDENT_DESKTOP = 5
+// What a row spends besides the name, indent and switch: the dot, the gap
+// before the description, and the card's border and padding.
+const ROW_CHROME = 14
 // A filter this narrow shows each match's whole description.
 const FULL_WHEN_AT_MOST = 3
 // The status grid's columns.
@@ -73,11 +76,10 @@ type Panel = PanelInput & {
 function toPanel(input: PanelInput): Panel {
   const query = input.query.trim().toLowerCase()
   const off = new Set(input.thread.skillsOff)
-  const shown = input.skills.filter(
-    skill =>
-      (input.view === 'all' || (input.view === 'off') === off.has(skill.name)) &&
-      (query === '' || skill.name.toLowerCase().includes(query) || skill.details.toLowerCase().includes(query)),
-  )
+  const isInView = (skill: SkillInfo) => input.view === 'all' || (input.view === 'off') === off.has(skill.name)
+  const matches = (skill: SkillInfo) =>
+    query === '' || skill.name.toLowerCase().includes(query) || skill.details.toLowerCase().includes(query)
+  const shown = input.skills.filter(skill => isInView(skill) && matches(skill))
 
   return {
     ...input,
@@ -92,7 +94,7 @@ function toPanel(input: PanelInput): Panel {
 }
 
 /** One line of the status grid: this thread's, or what new threads start with. */
-function statusLine(ui: Ui, panel: Panel, label: string, setup: Setup, isMain: boolean) {
+function statusGridRow(ui: Ui, panel: Panel, label: string, setup: Setup, isMain: boolean) {
   const { Box, Text } = ui
   const isMemoryOn = setup.memory === 'on'
   const offCount = setup.skillsOff.length
@@ -139,8 +141,8 @@ function statusCard(ui: Ui, panel: Panel, actions: PanelActions) {
       borderDimColor={panel.isAtDefaults}
       paddingX={1}
     >
-      {statusLine(ui, panel, 'This thread', panel.thread, true)}
-      {statusLine(ui, panel, 'New threads', panel.start, false)}
+      {statusGridRow(ui, panel, 'This thread', panel.thread, true)}
+      {statusGridRow(ui, panel, 'New threads', panel.start, false)}
       {/* Always drawn, so the card keeps its size: only the colours change. */}
       <Box justifyContent="space-between" alignItems="center" marginTop={1}>
         {panel.isAtDefaults ? (
@@ -199,7 +201,7 @@ function skillRow(ui: Ui, panel: Panel, actions: PanelActions, skill: SkillInfo)
   const isOff = panel.off.has(skill.name)
   const name = shortName(skill.name)
   const indent = panel.isTerminal ? INDENT_TERMINAL : INDENT_DESKTOP
-  const room = panel.width - name.length - indent - toggleWidth(panel.isTerminal) - 14
+  const room = panel.width - name.length - indent - toggleWidth(panel.isTerminal) - ROW_CHROME
   const blurb = clip(skill.description, Math.max(24, room))
 
   return (

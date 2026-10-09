@@ -136,13 +136,13 @@ export function listing($: Engine, agentId?: string) {
   })
 }
 
-export function pane($: Engine, surface: 'terminal' | 'desktop' = 'desktop') {
+export function pane($: Engine, surface: 'terminal' | 'desktop' = 'desktop', bodyColumns = 80) {
   return $.ui.mount({
     plugin: 'thread-setup',
     surface,
     component: 'Pane',
     requestId: 'thread-setup',
-    props: PANE_PROPS,
+    props: { ...PANE_PROPS, bodyColumns },
   })
 }
 

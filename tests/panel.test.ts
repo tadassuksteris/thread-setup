@@ -91,6 +91,33 @@ describe('controls', () => {
   })
 })
 
+describe('a narrow panel', () => {
+  for (const surface of SURFACES) {
+    test(`keeps every switch and stacks the rest (${surface})`, async ($, on) => {
+      engine(on)
+      await start($)
+      await listing($)
+      const ui = await pane($, surface, 40)
+
+      for (const key of ['memory', 'skill-crisp', 'skill-dataviz', 'skill-claude-api', 'reset-default']) {
+        expect(await ui.find({ key })).toBeDefined()
+      }
+      expect(await ui.find({ type: 'Text', text: 'This thread' })).toBeDefined()
+      expect(await ui.find({ key: 'view-off' })).toBeDefined()
+    })
+  }
+
+  test('cuts descriptions down to what fits', async ($, on) => {
+    engine(on)
+    await start($)
+    await listing($)
+    const narrow = await pane($, 'desktop', 40)
+    const blurb = await narrow.find({ type: 'Text', text: /Use this skill whenever you are/ })
+
+    expect((blurb?.text.length ?? 0) < 40).toBe(true)
+  })
+})
+
 describe('status card', () => {
   test('shows this thread against the defaults, and flags a difference', async ($, on) => {
     engine(on)

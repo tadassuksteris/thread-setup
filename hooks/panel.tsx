@@ -45,15 +45,18 @@ export type PanelActions = {
   toggleStatusLine: () => unknown
 }
 
-// Rows indent past the fold arrow of their group heading.
+// Below this many cells the panel stacks what sits side by side when it's wide.
+const NARROW_BELOW = 64
+// Rows indent past the fold arrow of their group heading; less when narrow.
 const INDENT_TERMINAL = 2
 const INDENT_DESKTOP = 5
+const INDENT_NARROW = 2
 // What a row spends besides the name, indent and switch: the dot, the gap
 // before the description, and the card's border and padding.
 const ROW_CHROME = 14
 // A filter this narrow shows each match's whole description.
 const FULL_WHEN_AT_MOST = 3
-// The status grid's columns.
+// The status grid's columns, when it's wide enough for a grid.
 const LABEL_COLUMN = 14
 const MEMORY_COLUMN = 16
 // Half a line between rows on desktop, where each row's toggle is a pill that
@@ -71,6 +74,8 @@ type Panel = PanelInput & {
   /** A filter or a view is on: every match shows, folded groups included. */
   isNarrowed: boolean
   isTerminal: boolean
+  /** Too narrow to set things side by side: they stack. */
+  isNarrow: boolean
 }
 
 function toPanel(input: PanelInput): Panel {
@@ -90,6 +95,7 @@ function toPanel(input: PanelInput): Panel {
     isFull: input.describe === 'full' || (query !== '' && shown.length <= FULL_WHEN_AT_MOST),
     isNarrowed: query !== '' || input.view !== 'all',
     isTerminal: input.surface === 'terminal',
+    isNarrow: input.width < NARROW_BELOW,
   }
 }
 
@@ -99,33 +105,56 @@ function statusGridRow(ui: Ui, panel: Panel, label: string, setup: Setup, isMain
   const isMemoryOn = setup.memory === 'on'
   const offCount = setup.skillsOff.length
   const total = panel.skills.length
+  const title = (
+    <Text bold={isMain} dimColor={!isMain}>
+      {label}
+    </Text>
+  )
+  const memoryPart = (
+    <Box flexShrink={0}>
+      <Text color={isMemoryOn ? 'green' : undefined} dimColor={!isMemoryOn}>
+        {isMemoryOn ? '●' : '○'}{' '}
+      </Text>
+      <Text dimColor={!isMain}>Memory {setup.memory}</Text>
+    </Box>
+  )
+  const skillsPart = (
+    <Box flexShrink={0}>
+      <Text color={offCount === 0 ? 'green' : 'yellow'}>● </Text>
+      {offCount === 0 ? (
+        <Text dimColor={!isMain}>All skills on</Text>
+      ) : (
+        <Box>
+          <Text dimColor={!isMain}>
+            {total > 0 ? `${Math.max(0, total - offCount)} skills on · ` : 'Skills: '}
+          </Text>
+          <Text color="yellow">{offCount} off</Text>
+        </Box>
+      )}
+    </Box>
+  )
+
+  if (panel.isNarrow) {
+    return (
+      <Box flexDirection="column">
+        {title}
+        <Box columnGap={3} flexWrap="wrap">
+          {memoryPart}
+          {skillsPart}
+        </Box>
+      </Box>
+    )
+  }
 
   return (
     <Box>
       <Box width={LABEL_COLUMN} flexShrink={0}>
-        <Text bold={isMain} dimColor={!isMain}>
-          {label}
-        </Text>
+        {title}
       </Box>
       <Box width={MEMORY_COLUMN} flexShrink={0}>
-        <Text color={isMemoryOn ? 'green' : undefined} dimColor={!isMemoryOn}>
-          {isMemoryOn ? '●' : '○'}{' '}
-        </Text>
-        <Text dimColor={!isMain}>Memory {setup.memory}</Text>
+        {memoryPart}
       </Box>
-      <Box>
-        <Text color={offCount === 0 ? 'green' : 'yellow'}>● </Text>
-        {offCount === 0 ? (
-          <Text dimColor={!isMain}>All skills on</Text>
-        ) : (
-          <Box>
-            <Text dimColor={!isMain}>
-              {total > 0 ? `${Math.max(0, total - offCount)} skills on · ` : 'Skills: '}
-            </Text>
-            <Text color="yellow">{offCount} off</Text>
-          </Box>
-        )}
-      </Box>
+      {skillsPart}
     </Box>
   )
 }
@@ -144,7 +173,13 @@ function statusCard(ui: Ui, panel: Panel, actions: PanelActions) {
       {statusGridRow(ui, panel, 'This thread', panel.thread, true)}
       {statusGridRow(ui, panel, 'New threads', panel.start, false)}
       {/* Always drawn, so the card keeps its size: only the colours change. */}
-      <Box justifyContent="space-between" alignItems="center" marginTop={1}>
+      <Box
+        flexDirection={panel.isNarrow ? 'column' : 'row'}
+        justifyContent="space-between"
+        alignItems={panel.isNarrow ? 'flex-start' : 'center'}
+        rowGap={1}
+        marginTop={1}
+      >
         {panel.isAtDefaults ? (
           <Text dimColor>Matches your defaults.</Text>
         ) : (
@@ -187,8 +222,10 @@ function modSettings(ui: Ui, panel: Panel, actions: PanelActions) {
   return (
     <Box flexDirection="column" paddingX={1} marginTop={1}>
       <Text dimColor>Mod settings</Text>
-      <Box justifyContent="space-between" alignItems="center">
-        <Text>Status line above the prompt</Text>
+      <Box justifyContent="space-between" alignItems="center" columnGap={1}>
+        <Box flexShrink={1} minWidth={0}>
+          <Text>Status line above the prompt</Text>
+        </Box>
         {toggle(ui, 'status-line', panel.isStatusLineOn, actions.toggleStatusLine, panel.isTerminal)}
       </Box>
       <Text dimColor>Shows this thread's setup in every thread. Closing it there switches this off.</Text>
@@ -200,7 +237,7 @@ function skillRow(ui: Ui, panel: Panel, actions: PanelActions, skill: SkillInfo)
   const { Box, Text } = ui
   const isOff = panel.off.has(skill.name)
   const name = shortName(skill.name)
-  const indent = panel.isTerminal ? INDENT_TERMINAL : INDENT_DESKTOP
+  const indent = panel.isTerminal ? INDENT_TERMINAL : panel.isNarrow ? INDENT_NARROW : INDENT_DESKTOP
   const room = panel.width - name.length - indent - toggleWidth(panel.isTerminal) - ROW_CHROME
   const blurb = clip(skill.description, Math.max(24, room))
 
@@ -211,20 +248,25 @@ function skillRow(ui: Ui, panel: Panel, actions: PanelActions, skill: SkillInfo)
       paddingLeft={indent}
       hover={panel.surface === 'desktop' ? { backgroundColor: DESKTOP_ROW_HOVER } : undefined}
     >
-      <Box justifyContent="space-between" alignItems="center">
-        <Box flexShrink={1}>
-          <Text color={isOff ? undefined : 'green'} dimColor={isOff}>
-            {isOff ? '○' : '●'}{' '}
-          </Text>
-          <Text bold={!isOff} dimColor={isOff} strikethrough={isOff}>
-            {name}
-          </Text>
+      <Box justifyContent="space-between" alignItems="center" columnGap={1}>
+        {/* Only the description gives way (minWidth 0), so the name stays whole and the switch in view. */}
+        <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
+          <Box flexShrink={0}>
+            <Text color={isOff ? undefined : 'green'} dimColor={isOff}>
+              {isOff ? '○' : '●'}{' '}
+            </Text>
+            <Text bold={!isOff} dimColor={isOff} strikethrough={isOff}>
+              {name}
+            </Text>
+          </Box>
           {/* An off skill keeps only its name, unless descriptions are full. */}
           {!panel.isFull && !isOff && (
-            <Text dimColor wrap="truncate-end">
-              {'  '}
-              {blurb}
-            </Text>
+            <Box flexShrink={1} minWidth={0} overflow="hidden">
+              <Text dimColor wrap="truncate-end">
+                {'  '}
+                {blurb}
+              </Text>
+            </Box>
           )}
         </Box>
         {toggle(ui, `skill-${skill.name}`, !isOff, () => actions.toggleSkill(skill.name), panel.isTerminal)}
@@ -305,8 +347,20 @@ function skillsCard(ui: Ui, Input: InputElement | undefined, panel: Panel, actio
         )}
       </Box>
       {total > 0 && (
-        <Box justifyContent="space-between" alignItems="center" flexWrap="wrap" columnGap={2}>
-          <Box alignItems="center" columnGap={1} flexWrap="wrap">
+        <Box
+          flexDirection={panel.isNarrow ? 'column' : 'row'}
+          justifyContent="space-between"
+          alignItems={panel.isNarrow ? 'flex-start' : 'center'}
+          flexWrap="wrap"
+          columnGap={2}
+          rowGap={panel.isNarrow ? 1 : 0}
+        >
+          <Box
+            flexDirection={panel.isNarrow ? 'column' : 'row'}
+            alignItems={panel.isNarrow ? 'flex-start' : 'center'}
+            columnGap={1}
+            rowGap={1}
+          >
             {Input !== undefined && (
               <Input
                 key="skill-filter"
@@ -316,21 +370,23 @@ function skillsCard(ui: Ui, Input: InputElement | undefined, panel: Panel, actio
                 onSubmit={value => actions.setQuery(value)}
               />
             )}
-            <Text dimColor>Show</Text>
-            {choice(
-              ui,
-              'view',
-              panel.view,
-              [
-                { value: 'all', label: `All ${total}` },
-                { value: 'on', label: `On ${total - offCount}` },
-                { value: 'off', label: `Off ${offCount}` },
-              ],
-              actions.setView,
-              tabSlot,
-            )}
+            <Box alignItems="center" columnGap={1} flexShrink={0}>
+              <Text dimColor>Show</Text>
+              {choice(
+                ui,
+                'view',
+                panel.view,
+                [
+                  { value: 'all', label: `All ${total}` },
+                  { value: 'on', label: `On ${total - offCount}` },
+                  { value: 'off', label: `Off ${offCount}` },
+                ],
+                actions.setView,
+                tabSlot,
+              )}
+            </Box>
           </Box>
-          <Box alignItems="center" gap={1}>
+          <Box alignItems="center" columnGap={1} flexShrink={0}>
             <Text dimColor>Descriptions</Text>
             {choice(
               ui,

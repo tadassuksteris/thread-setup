@@ -33,7 +33,7 @@ function statusLine(ui: Ui, input: BandInput, actions: BandActions) {
 
   return (
     <Box justifyContent="space-between" alignItems="center" gap={2}>
-      <Box alignItems="center" gap={2} flexShrink={1}>
+      <Box alignItems="center" columnGap={2} flexWrap="wrap" flexShrink={1} minWidth={0}>
         <Text bold>Thread setup</Text>
         <Box>
           <Text color={isMemoryOn ? 'green' : undefined} dimColor={!isMemoryOn}>
